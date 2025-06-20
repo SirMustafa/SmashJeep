@@ -1,4 +1,4 @@
-public enum WheelTypes
+public enum WheelType
 {
     FrontLeft,
     FrontRight,

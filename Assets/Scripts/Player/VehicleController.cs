@@ -9,9 +9,9 @@ public class VehicleController : MonoBehaviour
         public float _currentVelocity;
     }
 
-    private static readonly WheelTypes[] _wheels = new WheelTypes[]
+    private static readonly WheelType[] _wheels = new WheelType[]
     {
-        WheelTypes.FrontLeft, WheelTypes.FrontRight, WheelTypes.BackLeft, WheelTypes.BackRight,
+        WheelType.FrontLeft, WheelType.FrontRight, WheelType.BackLeft, WheelType.BackRight,
     };
 
     [Header("References")]
@@ -19,16 +19,16 @@ public class VehicleController : MonoBehaviour
     [SerializeField] BoxCollider _vehicleCollider;
     [SerializeField] VehicleSettingsSO _vehicleSettings;
 
-    private Dictionary<WheelTypes, SpringData> _springDatas;
+    private Dictionary<WheelType, SpringData> _springDatas;
 
     private float _steeringInput;
     private float _accelerationInput;
 
     private void Awake()
     {
-        _springDatas = new Dictionary<WheelTypes, SpringData>();
+        _springDatas = new Dictionary<WheelType, SpringData>();
 
-        foreach (WheelTypes wheelType in _wheels)
+        foreach (WheelType wheelType in _wheels)
         {
             _springDatas.Add(wheelType, new SpringData());
         }
@@ -42,6 +42,8 @@ public class VehicleController : MonoBehaviour
     private void FixedUpdate()
     {
         UpdateSuspansions();
+        UpdateSteering();
+        UpdateAcceleration();
     }
 
     void SetSteeringInput(float steering)
@@ -55,23 +57,99 @@ public class VehicleController : MonoBehaviour
 
     private void UpdateSuspansions()
     {
-        foreach (WheelTypes id in _springDatas.Keys)
+        foreach (WheelType id in _springDatas.Keys)
         {
+            CastSpring(id);
 
+            float currentVelocity = _springDatas[id]._currentVelocity;
+            float currentLength = _springDatas[id]._currentLength;
+
+            float force = SpringMathExtensions.CalculateForceDamped(currentLength, currentVelocity, _vehicleSettings.SpringRestLength, _vehicleSettings.SpringStrength, _vehicleSettings.SpringDamper);
+
+            _rb.AddForceAtPosition(force * transform.up, GetSpringPosition(id));
         }
     }
 
-    private void CastSpring(WheelTypes wheelType)
+    private void UpdateSteering()
     {
+        foreach (WheelType wheelType in _wheels)
+        {
+            if (!IsGrounded(wheelType))
+            {
+                continue;
+            }
 
+            Vector3 springPosition = GetSpringPosition(wheelType);
+            Vector3 slideDirection = GetWheelSlideDirection(wheelType);
+
+            float slideVelocity = Vector3.Dot(slideDirection, _rb.GetPointVelocity(springPosition));
+            float desiredVelocityChange = GetWheelGripFactor(wheelType) * -slideVelocity;
+            float desiredAcceleration = desiredVelocityChange / Time.fixedDeltaTime;
+
+            Vector3 force = desiredAcceleration * slideDirection * _vehicleSettings.TireMass;
+            _rb.AddForceAtPosition(force, GetWheelTorquePosition(wheelType));
+        }
     }
 
-    private Vector3 GetSpringPosition(WheelTypes wheelType)
+    private void UpdateAcceleration()
+    {
+        if (Mathf.Approximately(_accelerationInput, 0f))
+        {
+            return;
+        }
+
+        float forwardSpeed = Vector3.Dot(transform.forward, _rb.linearVelocity);
+        bool isMovingForward = forwardSpeed > 0;
+        float speed = Mathf.Abs(forwardSpeed);
+
+        if (isMovingForward && speed > _vehicleSettings.MaxSpeed)
+        {
+            return;
+        }
+        else if (!isMovingForward && speed > _vehicleSettings.MaxReverseSpeed)
+        {
+            return;
+        }
+
+        foreach (WheelType wheelType in _wheels)
+        {
+            if (!IsGrounded(wheelType))
+            {
+                continue;
+            }
+
+            Vector3 position = GetWheelTorquePosition(wheelType);
+            Vector3 wheelForward = GetWheelRollDirection(wheelType);
+
+            _rb.AddForceAtPosition(_accelerationInput * wheelForward * _vehicleSettings.AcceleratePower, position);
+        }
+    }
+
+    private void CastSpring(WheelType wheelType)
+    {
+        Vector3 position = GetSpringPosition(wheelType);
+        float previousLength = _springDatas[wheelType]._currentLength;
+        float currentLength;
+
+        if (Physics.Raycast(position, -transform.up, out var hit, _vehicleSettings.SpringRestLength))
+        {
+            currentLength = hit.distance;
+        }
+        else
+        {
+            currentLength = _vehicleSettings.SpringRestLength;
+        }
+
+        _springDatas[wheelType]._currentVelocity = (currentLength - previousLength) / Time.fixedDeltaTime;
+        _springDatas[wheelType]._currentLength = currentLength;
+    }
+
+    private Vector3 GetSpringPosition(WheelType wheelType)
     {
         return transform.localToWorldMatrix.MultiplyPoint3x4(GetSpringRelativePosition(wheelType));
     }
 
-    private Vector3 GetSpringRelativePosition(WheelTypes wheelType)
+    private Vector3 GetSpringRelativePosition(WheelType wheelType)
     {
         Vector3 boxSize = _vehicleCollider.size;
         float boxBottom = boxSize.y * -0.5f;
@@ -81,12 +159,76 @@ public class VehicleController : MonoBehaviour
 
         return wheelType switch
         {
-            WheelTypes.FrontLeft => new Vector3(boxSize.x * (paddingX - 0.5f), boxBottom, boxSize.z * (0.5f - paddingZ)),
-            WheelTypes.FrontRight => new Vector3(boxSize.x * (0.5f - paddingX), boxBottom, boxSize.z * (0.5f - paddingZ)),
-            WheelTypes.BackLeft => new Vector3(boxSize.x * (paddingX - 0.5f), boxBottom, boxSize.z * (paddingZ - 0.5f)),
-            WheelTypes.BackRight => new Vector3(boxSize.x * (0.5f - paddingX), boxBottom, boxSize.z * (paddingZ - 0.5f)),
+            WheelType.FrontLeft => new Vector3(boxSize.x * (paddingX - 0.5f), boxBottom, boxSize.z * (0.5f - paddingZ)),
+            WheelType.FrontRight => new Vector3(boxSize.x * (0.5f - paddingX), boxBottom, boxSize.z * (0.5f - paddingZ)),
+            WheelType.BackLeft => new Vector3(boxSize.x * (paddingX - 0.5f), boxBottom, boxSize.z * (paddingZ - 0.5f)),
+            WheelType.BackRight => new Vector3(boxSize.x * (0.5f - paddingX), boxBottom, boxSize.z * (paddingZ - 0.5f)),
 
             _ => default
         };
+    }
+
+    private Vector3 GetWheelSlideDirection(WheelType wheelType)
+    {
+        Vector3 forward = GetWheelRollDirection(wheelType);
+        return Vector3.Cross(transform.up, forward);
+    }
+
+    private Vector3 GetWheelRollDirection(WheelType wheelType)
+    {
+        bool frontWheels = wheelType == WheelType.FrontLeft || wheelType == WheelType.FrontRight;
+
+        if (frontWheels)
+        {
+            var steerQuaternation = Quaternion.AngleAxis(_steeringInput * _vehicleSettings.SteerAngle, Vector3.up);
+            return steerQuaternation * transform.forward;
+        }
+        else
+        {
+            return transform.forward;
+        }
+    }
+
+    private float GetWheelGripFactor(WheelType wheelType)
+    {
+        bool frontWheels = wheelType == WheelType.FrontLeft || wheelType == WheelType.FrontRight;
+        return frontWheels ? _vehicleSettings.FrontWheelGripFactor : _vehicleSettings.BackWheelGripFactor;
+    }
+
+    private Vector3 GetWheelTorquePosition(WheelType wheelType)
+    {
+        return transform.localToWorldMatrix.MultiplyPoint3x4(GetWheelRelativeTorquePosition(wheelType));
+    }
+
+    private Vector3 GetWheelRelativeTorquePosition(WheelType wheelType)
+    {
+        Vector3 boxSize = _vehicleCollider.size;
+
+        float paddingX = _vehicleSettings.WheelPaddingX;
+        float paddingZ = _vehicleSettings.WheelPaddingZ;
+
+        return wheelType switch
+        {
+            WheelType.FrontLeft => new Vector3(boxSize.x * (paddingX - 0.5f), 0f, boxSize.z * (0.5f - paddingZ)),
+            WheelType.FrontRight => new Vector3(boxSize.x * (0.5f - paddingX), 0f, boxSize.z * (0.5f - paddingZ)),
+            WheelType.BackLeft => new Vector3(boxSize.x * (paddingX - 0.5f), 0f, boxSize.z * (paddingZ - 0.5f)),
+            WheelType.BackRight => new Vector3(boxSize.x * (0.5f - paddingX), 0f, boxSize.z * (paddingZ - 0.5f)),
+
+            _ => default
+        };
+    }
+
+    private bool IsGrounded(WheelType wheelType)
+    {
+        return _springDatas[wheelType]._currentLength < _vehicleSettings.SpringRestLength;
+    }
+}
+
+public static class SpringMathExtensions
+{
+    public static float CalculateForceDamped(float currentLength, float lengthVelocity, float restLength, float strength, float damper)
+    {
+        float lengthOffset = restLength - currentLength;
+        return (lengthOffset * strength) - (damper * lengthVelocity);
     }
 }
