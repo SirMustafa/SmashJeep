@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class VehicleController : MonoBehaviour
 {
@@ -18,6 +17,7 @@ public class VehicleController : MonoBehaviour
     [Header("References")]
     [SerializeField] Rigidbody _rb;
     [SerializeField] BoxCollider _vehicleCollider;
+    [SerializeField] VehicleSettingsSO _vehicleSettings;
 
     private Dictionary<WheelTypes, SpringData> _springDatas;
 
@@ -39,6 +39,10 @@ public class VehicleController : MonoBehaviour
         SetAccelerationInput(Input.GetAxis("Vertical"));
         SetSteeringInput(Input.GetAxis("Horizontal"));
     }
+    private void FixedUpdate()
+    {
+        UpdateSuspansions();
+    }
 
     void SetSteeringInput(float steering)
     {
@@ -47,5 +51,42 @@ public class VehicleController : MonoBehaviour
     void SetAccelerationInput(float acceleration)
     {
         _accelerationInput = Mathf.Clamp(acceleration, -1, 1);
+    }
+
+    private void UpdateSuspansions()
+    {
+        foreach (WheelTypes id in _springDatas.Keys)
+        {
+
+        }
+    }
+
+    private void CastSpring(WheelTypes wheelType)
+    {
+
+    }
+
+    private Vector3 GetSpringPosition(WheelTypes wheelType)
+    {
+        return transform.localToWorldMatrix.MultiplyPoint3x4(GetSpringRelativePosition(wheelType));
+    }
+
+    private Vector3 GetSpringRelativePosition(WheelTypes wheelType)
+    {
+        Vector3 boxSize = _vehicleCollider.size;
+        float boxBottom = boxSize.y * -0.5f;
+
+        float paddingX = _vehicleSettings.WheelPaddingX;
+        float paddingZ = _vehicleSettings.WheelPaddingZ;
+
+        return wheelType switch
+        {
+            WheelTypes.FrontLeft => new Vector3(boxSize.x * (paddingX - 0.5f), boxBottom, boxSize.z * (0.5f - paddingZ)),
+            WheelTypes.FrontRight => new Vector3(boxSize.x * (0.5f - paddingX), boxBottom, boxSize.z * (0.5f - paddingZ)),
+            WheelTypes.BackLeft => new Vector3(boxSize.x * (paddingX - 0.5f), boxBottom, boxSize.z * (paddingZ - 0.5f)),
+            WheelTypes.BackRight => new Vector3(boxSize.x * (0.5f - paddingX), boxBottom, boxSize.z * (paddingZ - 0.5f)),
+
+            _ => default
+        };
     }
 }

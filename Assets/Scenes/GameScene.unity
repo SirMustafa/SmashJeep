@@ -688,8 +688,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8368aaf0e1caadc43a23bf2208e3bef3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rb: {fileID: 0}
-  _vehicleCollider: {fileID: 0}
+  _rb: {fileID: 721882881}
+  _vehicleCollider: {fileID: 721882879}
 --- !u!23 &723651592
 MeshRenderer:
   m_ObjectHideFlags: 0
