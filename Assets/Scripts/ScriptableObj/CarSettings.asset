@@ -20,3 +20,9 @@ MonoBehaviour:
   _steerAngle: 25
   _frontWheelsGripFactor: 0.8
   _backWheelsGripFactor: 0.9
+  _tireMass: 1
+  _acceleratePower: 400
+  _maxSpeed: 22
+  _maxReverseSpeed: 12
+  _breakesPower: 1.5
+  _airResistance: 0
