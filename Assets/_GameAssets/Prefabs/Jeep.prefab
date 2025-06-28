@@ -190,6 +190,7 @@ GameObject:
   - component: {fileID: 7540946576135281076}
   - component: {fileID: 1056270426483590039}
   - component: {fileID: -5608089002620145882}
+  - component: {fileID: 738584228877728698}
   m_Layer: 0
   m_Name: Jeep
   m_TagString: Untagged
@@ -250,7 +251,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -422,6 +423,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   _playerCamera: {fileID: 1015711211793737638}
+--- !u!114 &738584228877728698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 899760185607325163}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e676fc4e6c7c5645ac3224d6919fd7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1 &1511724105458131123
 GameObject:
   m_ObjectHideFlags: 0
