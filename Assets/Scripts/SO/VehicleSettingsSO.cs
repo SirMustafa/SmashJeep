@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "CarSettings")]
+[CreateAssetMenu(fileName = "CarSettings", menuName = "Scriptable Objects/Vehicle Settings")]
 public class VehicleSettingsSO : ScriptableObject
 {
     [Header("Paddings")]

@@ -1,6 +1,6 @@
 public interface ICollectable
 {
-    void Collect();
+    void Collect(PlayerSkillController playerSkillController);
 
     void CollectRpc();
 }
